@@ -109,40 +109,6 @@ func main() {
 }
 ```
 
-Output:
-
-```
-══════════════════════════════════════════════════════════════
-  🔍 ORIGAMY SDK - NOOP DISPATCHER
-──────────────────────────────────────────────────────────────
-  Batch ID:  abc123
-  Sent At:   2024-01-15T10:30:00Z
-  Messages:  2
-══════════════════════════════════════════════════════════════
-
-  📊 Message #1: TRACK
-──────────────────────────────────────────────────────────
-    Message ID:   msg-001
-    User ID:      user-123
-    Event:        button_clicked
-    Properties:
-      button: "signup"
-    Timestamp:    2024-01-15T10:30:00Z
-
-  👤 Message #2: IDENTIFY
-──────────────────────────────────────────────────────────
-    Message ID:   msg-002
-    User ID:      user-123
-    Traits:
-      email: "user@example.com"
-      name: "John Doe"
-    Timestamp:    2024-01-15T10:30:00Z
-
-══════════════════════════════════════════════════════════════
-  ⚠ This is a NOOP dispatcher - no data was sent
-══════════════════════════════════════════════════════════════
-```
-
 ### Custom Queue
 
 For advanced use cases, you can provide a custom queue implementation:

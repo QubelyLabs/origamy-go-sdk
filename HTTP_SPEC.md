@@ -2,7 +2,7 @@
 
 ## Overview
 
-The HTTP service receives batched analytics events from the Origamy Go SDK (and other SDKs) at the `/v1/batch` endpoint.
+The HTTP service receives batched analytics events from the Origamy Go SDK (and other SDKs) at the `/v1/batch` endpoint. The wire format is intentionally identical to the Origamy Web SDK so a single backend handles all SDK types uniformly.
 
 ---
 
@@ -10,7 +10,10 @@ The HTTP service receives batched analytics events from the Origamy Go SDK (and 
 
 ```
 POST /v1/batch
+Host: api.origamy.com
 ```
+
+Default base URL: `https://api.origamy.com`
 
 ---
 
@@ -21,8 +24,6 @@ POST /v1/batch
 - **Username**: `WriteKey` (the project/source write key)
 - **Password**: Empty string (`""`)
 
-The write key is sent in the `Authorization` header using standard Basic Auth encoding:
-
 ```
 Authorization: Basic base64(writeKey:)
 ```
@@ -31,12 +32,12 @@ Authorization: Basic base64(writeKey:)
 
 ## Request Headers
 
-| Header           | Required | Description                                         |
-| ---------------- | -------- | --------------------------------------------------- |
-| `Authorization`  | Yes      | Basic auth with write key as username               |
-| `Content-Type`   | Yes      | `application/json`                                  |
-| `Content-Length` | Yes      | Size of request body in bytes                       |
-| `User-Agent`     | Yes      | SDK identifier, e.g., `origamy-go (version: 3.0.0)` |
+| Header           | Required | Value / Example                              |
+| ---------------- | -------- | -------------------------------------------- |
+| `Authorization`  | Yes      | `Basic <base64(writeKey:)>`                  |
+| `Content-Type`   | Yes      | `application/json`                           |
+| `Content-Length` | Yes      | Size of request body in bytes                |
+| `User-Agent`     | Yes      | `origamy-go (version: 3.0.0)`                |
 
 ---
 
@@ -44,38 +45,25 @@ Authorization: Basic base64(writeKey:)
 
 ```json
 {
-  "messageId": "string",
-  "sentAt": "ISO8601 timestamp",
-  "context": { ... },
-  "batch": [ ... ]
+  "batch":  [ ...events ],
+  "sentAt": "2024-01-15T10:30:00.123Z"
 }
 ```
 
 ### Top-Level Fields
 
-| Field       | Type             | Required | Description                                                     |
-| ----------- | ---------------- | -------- | --------------------------------------------------------------- |
-| `messageId` | string           | Yes      | Unique batch identifier (UUID)                                  |
-| `sentAt`    | string (ISO8601) | Yes      | Timestamp when batch was sent                                   |
-| `context`   | object           | Yes      | SDK/library context                                             |
-| `batch`     | array            | Yes      | Array of event messages (max 500KB total, max 32KB per message) |
+| Field     | Type             | Required | Description                                                       |
+| --------- | ---------------- | -------- | ----------------------------------------------------------------- |
+| `batch`   | array            | Yes      | Array of event messages (max 500KB total, max 32KB per message)   |
+| `sentAt`  | string (ISO8601) | Yes      | Timestamp when the batch was dispatched, with milliseconds (`.sssZ`) |
 
-### Batch Context Object
-
-```json
-{
-  "library": {
-    "name": "origamy-go",
-    "version": "3.0.0"
-  }
-}
-```
+> **Note**: Unlike some older analytics SDKs, there is no top-level `messageId` or `context` field. Context (including library info) is attached to each individual event in the `batch` array, matching the Origamy Web SDK format.
 
 ---
 
 ## Message Types
 
-All messages in the `batch` array have a `type` field. Supported types:
+All messages in the `batch` array have a `type` field:
 
 | Type       | Description                  |
 | ---------- | ---------------------------- |
@@ -92,12 +80,12 @@ All messages in the `batch` array have a `type` field. Supported types:
 
 | Field          | Type             | Required    | Description                                                           |
 | -------------- | ---------------- | ----------- | --------------------------------------------------------------------- |
-| `type`         | string           | Yes         | Message type: `track`, `identify`, `page`, `screen`, `group`, `alias` |
-| `messageId`    | string           | Yes         | Unique message identifier                                             |
-| `timestamp`    | string (ISO8601) | Yes         | When the event occurred                                               |
-| `userId`       | string           | Conditional | User identifier (required unless `anonymousId` provided)              |
-| `anonymousId`  | string           | Conditional | Anonymous user identifier                                             |
-| `context`      | object           | No          | Event-level context (merges with batch context)                       |
+| `type`         | string           | Yes         | Message type                                                          |
+| `messageId`    | string           | Yes         | Unique message identifier (UUID)                                      |
+| `timestamp`    | string (ISO8601) | Yes         | When the event occurred (e.g. `2024-01-15T10:30:00Z`)                |
+| `userId`       | string           | Conditional | User identifier — required unless `anonymousId` is provided           |
+| `anonymousId`  | string           | Conditional | Anonymous user identifier — required unless `userId` is provided      |
+| `context`      | object           | Yes         | Per-event context including library info (see Context Object Schema)  |
 | `integrations` | object           | No          | Integration routing rules                                             |
 
 ---
@@ -107,21 +95,21 @@ All messages in the `batch` array have a `type` field. Supported types:
 ```json
 {
   "type": "track",
-  "messageId": "uuid",
+  "messageId": "uuid-001",
   "userId": "user-123",
-  "anonymousId": "anon-456",
   "event": "Order Completed",
   "timestamp": "2024-01-15T10:30:00Z",
   "properties": {
+    "orderId": "ORD-9999",
     "revenue": 99.99,
     "currency": "USD",
-    "orderId": "order-789",
     "products": [
-      { "id": "prod-1", "sku": "SKU-001", "name": "Widget", "price": 49.99 }
+      { "sku": "SKU-A", "name": "Widget", "price": 49.99, "quantity": 2 }
     ]
   },
-  "context": { ... },
-  "integrations": { "All": true, "Mixpanel": false }
+  "context": {
+    "library": { "name": "origamy-go", "version": "3.0.0" }
+  }
 }
 ```
 
@@ -134,22 +122,20 @@ All messages in the `batch` array have a `type` field. Supported types:
 ```json
 {
   "type": "identify",
-  "messageId": "uuid",
+  "messageId": "uuid-002",
   "userId": "user-123",
-  "anonymousId": "anon-456",
   "timestamp": "2024-01-15T10:30:00Z",
   "traits": {
     "email": "user@example.com",
-    "firstName": "John",
-    "lastName": "Doe",
-    "phone": "+1234567890",
-    "age": 30,
-    "birthday": "1994-01-15T00:00:00Z",
-    "createdAt": "2023-01-01T00:00:00Z",
-    "avatar": "https://example.com/avatar.png"
+    "firstName": "Alice",
+    "lastName": "Smith",
+    "phone": "+15551234567",
+    "plan": "enterprise",
+    "createdAt": "2023-01-01T00:00:00Z"
   },
-  "context": { ... },
-  "integrations": { ... }
+  "context": {
+    "library": { "name": "origamy-go", "version": "3.0.0" }
+  }
 }
 ```
 
@@ -162,19 +148,21 @@ All messages in the `batch` array have a `type` field. Supported types:
 ```json
 {
   "type": "page",
-  "messageId": "uuid",
+  "messageId": "uuid-003",
   "userId": "user-123",
-  "anonymousId": "anon-456",
-  "name": "Home",
+  "name": "Pricing",
   "timestamp": "2024-01-15T10:30:00Z",
   "properties": {
-    "url": "https://example.com/home",
-    "path": "/home",
-    "title": "Home Page",
+    "url":      "https://example.com/pricing",
+    "path":     "/pricing",
+    "title":    "Pricing Plans",
     "referrer": "https://google.com"
   },
-  "context": { ... },
-  "integrations": { ... }
+  "context": {
+    "library":   { "name": "origamy-go", "version": "3.0.0" },
+    "userAgent": "Go-http-client/2.0",
+    "locale":    "en-US"
+  }
 }
 ```
 
@@ -187,16 +175,20 @@ All messages in the `batch` array have a `type` field. Supported types:
 ```json
 {
   "type": "screen",
-  "messageId": "uuid",
-  "userId": "user-123",
-  "anonymousId": "anon-456",
+  "messageId": "uuid-004",
+  "userId": "mobile-user-7",
   "name": "Dashboard",
   "timestamp": "2024-01-15T10:30:00Z",
   "properties": {
-    "category": "Main"
+    "category": "Main",
+    "tab": "overview"
   },
-  "context": { ... },
-  "integrations": { ... }
+  "context": {
+    "library": { "name": "origamy-go", "version": "3.0.0" },
+    "os":     { "name": "iOS", "version": "17.2" },
+    "device": { "manufacturer": "Apple", "model": "iPhone 15", "type": "mobile" },
+    "screen": { "width": 390, "height": 844, "density": 3 }
+  }
 }
 ```
 
@@ -209,18 +201,19 @@ All messages in the `batch` array have a `type` field. Supported types:
 ```json
 {
   "type": "group",
-  "messageId": "uuid",
+  "messageId": "uuid-005",
   "userId": "user-123",
-  "anonymousId": "anon-456",
-  "groupId": "company-789",
+  "groupId": "company-acme",
   "timestamp": "2024-01-15T10:30:00Z",
   "traits": {
-    "name": "Acme Corp",
+    "name":    "Acme Corp",
     "website": "https://acme.com",
-    "description": "Enterprise software company"
+    "plan":    "enterprise",
+    "mrr":     12000
   },
-  "context": { ... },
-  "integrations": { ... }
+  "context": {
+    "library": { "name": "origamy-go", "version": "3.0.0" }
+  }
 }
 ```
 
@@ -233,12 +226,13 @@ All messages in the `batch` array have a `type` field. Supported types:
 ```json
 {
   "type": "alias",
-  "messageId": "uuid",
-  "userId": "new-user-id",
-  "previousId": "old-anonymous-id",
+  "messageId": "uuid-006",
+  "userId": "identified-user-1",
+  "previousId": "anon-session-xyz",
   "timestamp": "2024-01-15T10:30:00Z",
-  "context": { ... },
-  "integrations": { ... }
+  "context": {
+    "library": { "name": "origamy-go", "version": "3.0.0" }
+  }
 }
 ```
 
@@ -248,103 +242,85 @@ All messages in the `batch` array have a `type` field. Supported types:
 
 ## Context Object Schema
 
-The context object can appear at both batch and message level:
+Context is attached to each event individually. The SDK always populates `library` with the SDK name and version. Applications can add or override context fields per-event:
 
 ```json
 {
+  "library": {
+    "name":    "origamy-go",
+    "version": "3.0.0"
+  },
   "app": {
-    "name": "MyApp",
-    "version": "2.0.0",
-    "build": "123",
+    "name":      "MyApp",
+    "version":   "2.0.0",
+    "build":     "123",
     "namespace": "com.example.myapp"
   },
   "campaign": {
-    "name": "Winter Sale",
-    "source": "google",
-    "medium": "cpc",
-    "term": "winter deals",
+    "name":    "Winter Sale",
+    "source":  "email",
+    "medium":  "newsletter",
+    "term":    "winter deals",
     "content": "ad-variation-1"
   },
   "device": {
-    "id": "device-uuid",
+    "id":           "device-uuid",
     "manufacturer": "Apple",
-    "model": "iPhone 15",
-    "name": "John's iPhone",
-    "type": "mobile",
-    "version": "17.0",
-    "advertisingId": "ad-id"
-  },
-  "library": {
-    "name": "origamy-go",
-    "version": "3.0.0"
+    "model":        "iPhone 15",
+    "name":         "Alice's iPhone",
+    "type":         "mobile",
+    "version":      "17.0",
+    "advertisingId":"ad-id"
   },
   "location": {
-    "city": "San Francisco",
-    "country": "USA",
-    "region": "California",
-    "latitude": 37.7749,
-    "longitude": -122.4194,
-    "speed": 0
+    "city":      "San Francisco",
+    "country":   "USA",
+    "region":    "California",
+    "latitude":  37.7749,
+    "longitude": -122.4194
   },
   "network": {
     "bluetooth": false,
-    "cellular": true,
-    "wifi": false,
-    "carrier": "Verizon"
+    "cellular":  true,
+    "wifi":      false,
+    "carrier":   "Verizon"
   },
   "os": {
-    "name": "iOS",
+    "name":    "iOS",
     "version": "17.0"
   },
   "page": {
-    "hash": "#section",
-    "path": "/products",
+    "path":     "/products",
     "referrer": "https://google.com",
-    "search": "?q=search",
-    "title": "Products",
-    "url": "https://example.com/products"
-  },
-  "referrer": {
-    "type": "organic",
-    "name": "Google",
-    "url": "https://google.com",
-    "link": "https://google.com/search?q=..."
+    "search":   "?q=search",
+    "title":    "Products",
+    "url":      "https://example.com/products"
   },
   "screen": {
     "density": 2,
-    "width": 1920,
-    "height": 1080
+    "width":   1920,
+    "height":  1080
   },
-  "ip": "192.168.1.1",
-  "direct": false,
-  "locale": "en-US",
-  "groupId": "company-123",
-  "timezone": "America/Los_Angeles",
-  "userAgent": "Mozilla/5.0 ...",
-  "traits": { ... }
+  "ip":        "192.168.1.1",
+  "locale":    "en-US",
+  "timezone":  "America/Los_Angeles",
+  "userAgent": "Go-http-client/2.0"
 }
 ```
 
 ---
 
-## Integrations Object Schema
+## Integrations Object
 
 Controls which downstream integrations receive the event:
 
 ```json
 {
-  "All": true,
-  "Mixpanel": true,
-  "Salesforce": false,
-  "Intercom": {
-    "customField": "value"
-  }
+  "All":       true,
+  "Mixpanel":  true,
+  "Salesforce": false
 }
 ```
-
-- `true`: Enable integration
-- `false`: Disable integration
-- Object: Enable with custom options
 
 ---
 
@@ -362,30 +338,25 @@ Controls which downstream integrations receive the event:
 ### Success Response
 
 ```json
-{
-  "success": true
-}
+{ "success": true }
 ```
 
 ### Error Response
 
 ```json
-{
-  "success": false,
-  "error": "Error description"
-}
+{ "success": false, "error": "Error description" }
 ```
 
 ---
 
 ## Limits
 
-| Limit                  | Value                            |
-| ---------------------- | -------------------------------- |
-| Max batch size         | 500,000 bytes (500KB)            |
-| Max message size       | 32,000 bytes (32KB)              |
-| Max messages per batch | No explicit limit (size-bounded) |
-| Request timeout        | 10 seconds (SDK default)         |
+| Limit                  | Value                 |
+| ---------------------- | --------------------- |
+| Max batch size         | 500,000 bytes (500KB) |
+| Max message size       | 32,000 bytes (32KB)   |
+| Request timeout        | 10 seconds            |
+| Retry attempts         | 10 (exponential backoff) |
 
 ---
 
@@ -393,21 +364,13 @@ Controls which downstream integrations receive the event:
 
 ```http
 POST /v1/batch HTTP/1.1
-Host: api.origamy.example.com
+Host: api.origamy.com
 Authorization: Basic d3JpdGVfa2V5Xzk4NzY1NDMyMTA6
 Content-Type: application/json
-Content-Length: 1234
+Content-Length: 987
 User-Agent: origamy-go (version: 3.0.0)
 
 {
-  "messageId": "550e8400-e29b-41d4-a716-446655440000",
-  "sentAt": "2024-01-15T10:30:00Z",
-  "context": {
-    "library": {
-      "name": "origamy-go",
-      "version": "3.0.0"
-    }
-  },
   "batch": [
     {
       "type": "identify",
@@ -415,34 +378,45 @@ User-Agent: origamy-go (version: 3.0.0)
       "userId": "user-123",
       "timestamp": "2024-01-15T10:30:00Z",
       "traits": {
-        "email": "user@example.com",
-        "firstName": "John"
+        "email": "alice@example.com",
+        "name":  "Alice Smith",
+        "plan":  "enterprise"
+      },
+      "context": {
+        "library": { "name": "origamy-go", "version": "3.0.0" }
       }
     },
     {
       "type": "track",
       "messageId": "msg-002",
       "userId": "user-123",
-      "event": "Product Viewed",
+      "event": "Order Completed",
       "timestamp": "2024-01-15T10:30:01Z",
       "properties": {
-        "productId": "prod-456",
-        "price": 29.99
+        "orderId":  "ORD-9999",
+        "revenue":  99.99,
+        "currency": "USD"
+      },
+      "context": {
+        "library": { "name": "origamy-go", "version": "3.0.0" }
       }
     }
-  ]
+  ],
+  "sentAt": "2024-01-15T10:30:01.234Z"
 }
 ```
 
 ---
 
-## Validation Rules Summary
+## Validation Rules
 
 | Message Type | Required Fields                                             |
 | ------------ | ----------------------------------------------------------- |
-| `track`      | `type`, `messageId`, `event`, (`userId` OR `anonymousId`)   |
-| `identify`   | `type`, `messageId`, (`userId` OR `anonymousId`)            |
-| `page`       | `type`, `messageId`, (`userId` OR `anonymousId`)            |
-| `screen`     | `type`, `messageId`, (`userId` OR `anonymousId`)            |
-| `group`      | `type`, `messageId`, `groupId`, (`userId` OR `anonymousId`) |
-| `alias`      | `type`, `messageId`, `userId`, `previousId`                 |
+| `track`      | `event`, (`userId` OR `anonymousId`)                        |
+| `identify`   | (`userId` OR `anonymousId`)                                 |
+| `page`       | (`userId` OR `anonymousId`)                                 |
+| `screen`     | (`userId` OR `anonymousId`)                                 |
+| `group`      | `groupId`, (`userId` OR `anonymousId`)                      |
+| `alias`      | `userId`, `previousId`                                      |
+
+`messageId` and `timestamp` are always auto-populated by the SDK when not provided by the caller.

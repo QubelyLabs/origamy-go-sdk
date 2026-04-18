@@ -1,14 +1,7 @@
 ## Installation
 
-The package can be simply installed via go get, we recommend that you use a
-package version management system like the Go vendor directory or a tool like
-Godep to avoid issues related to API breaking changes introduced between major
-versions of the library.
-
-To install it in the GOPATH:
-
 ```
-go get https://github.com/qubely/origamy-go-sdk
+go get github.com/qubely/origamy-go-sdk
 ```
 
 ## Usage
@@ -25,117 +18,134 @@ import (
 )
 
 func main() {
-    // Instantiates a client to send messages to the Origamy API.
     client := origamy.New(os.Getenv("ORIGAMY_WRITE_KEY"))
+    defer client.Close()
 
-    // Enqueues a track event that will be sent asynchronously.
     client.Enqueue(origamy.Track{
-        UserId: "test-user",
-        Event:  "test-snippet",
+        UserId: "user-123",
+        Event:  "Signed Up",
     })
-
-    // Flushes any queued messages and closes the client.
-    client.Close()
 }
+```
+
+### Message Types
+
+All six Segment-compatible message types are supported:
+
+```go
+// Track an action
+client.Enqueue(origamy.Track{
+    UserId: "user-123",
+    Event:  "Order Completed",
+    Properties: origamy.NewProperties().
+        Set("orderId", "ORD-9999").
+        SetRevenue(99.99).
+        SetCurrency("USD"),
+})
+
+// Identify a user with traits
+client.Enqueue(origamy.Identify{
+    UserId: "user-123",
+    Traits: origamy.NewTraits().
+        SetEmail("alice@example.com").
+        SetName("Alice Smith").
+        Set("plan", "pro"),
+})
+
+// Track a page view
+client.Enqueue(origamy.Page{
+    UserId: "user-123",
+    Name:   "Pricing",
+    Properties: origamy.Properties{
+        "url":   "https://example.com/pricing",
+        "title": "Pricing Plans",
+    },
+})
+
+// Track a mobile screen view
+client.Enqueue(origamy.Screen{
+    UserId: "user-123",
+    Name:   "Dashboard",
+    Properties: origamy.Properties{"tab": "overview"},
+})
+
+// Associate a user with a group/company
+client.Enqueue(origamy.Group{
+    UserId:  "user-123",
+    GroupId: "company-acme",
+    Traits: origamy.NewTraits().
+        SetName("Acme Corp").
+        SetWebsite("https://acme.com"),
+})
+
+// Alias an anonymous ID to an identified user
+client.Enqueue(origamy.Alias{
+    UserId:     "user-123",
+    PreviousId: "anon-session-abc",
+})
+```
+
+### Anonymous Users
+
+Pass `AnonymousId` instead of (or in addition to) `UserId` for anonymous tracking:
+
+```go
+client.Enqueue(origamy.Track{
+    AnonymousId: "anon-browser-xyz",
+    Event:       "Page Scrolled",
+    Properties:  origamy.Properties{"depth": 75},
+})
 ```
 
 ### With Options
 
-The SDK supports functional options for flexible configuration:
-
 ```go
-package main
-
-import (
-    "time"
-
-    origamy "github.com/qubely/origamy-go-sdk"
+client := origamy.New("your-write-key",
+    origamy.WithVerbose(true),
+    origamy.WithBatchSize(100),
+    origamy.WithInterval(10 * time.Second),
+    origamy.WithEndpoint("https://api.origamy.com"),
 )
-
-func main() {
-    // Create client with custom options
-    client := origamy.New("your-write-key",
-        origamy.WithVerbose(true),
-        origamy.WithBatchSize(100),
-        origamy.WithInterval(10 * time.Second),
-    )
-    defer client.Close()
-
-    client.Enqueue(origamy.Track{
-        UserId: "user-123",
-        Event:  "purchase",
-        Properties: origamy.NewProperties().
-            SetRevenue(99.99).
-            SetCurrency("USD"),
-    })
-}
+defer client.Close()
 ```
 
 ### Development Mode (Noop Dispatcher)
 
-For development and debugging, use the `NoopDispatcher` which logs events to the console in a human-readable format instead of sending them to the API:
+For local development, use `NoopDispatcher` to log events to the console instead of sending them:
 
 ```go
-package main
+noopDispatcher := origamy.NewNoopDispatcher(origamy.DispatcherConfig{
+    Verbose: true,
+})
 
-import origamy "github.com/qubely/origamy-go-sdk"
+client := origamy.New("your-write-key",
+    origamy.WithDispatcher(noopDispatcher),
+)
+defer client.Close()
 
-func main() {
-    // Create a noop dispatcher for development
-    noopDispatcher := origamy.NewNoopDispatcher(origamy.DispatcherConfig{
-        Verbose: true,
-    })
-
-    // Create client with noop dispatcher
-    client := origamy.New("your-write-key",
-        origamy.WithDispatcher(noopDispatcher),
-    )
-    defer client.Close()
-
-    // Events will be logged to console instead of sent to API
-    client.Enqueue(origamy.Track{
-        UserId: "user-123",
-        Event:  "button_clicked",
-        Properties: origamy.NewProperties().
-            Set("button", "signup"),
-    })
-
-    client.Enqueue(origamy.Identify{
-        UserId: "user-123",
-        Traits: origamy.NewTraits().
-            SetEmail("user@example.com").
-            SetName("John Doe"),
-    })
-}
+client.Enqueue(origamy.Track{
+    UserId: "user-123",
+    Event:  "button_clicked",
+    Properties: origamy.NewProperties().Set("button", "signup"),
+})
 ```
 
 ### Custom Queue
 
-For advanced use cases, you can provide a custom queue implementation:
-
 ```go
-package main
+queue := origamy.NewChannelQueue(
+    origamy.QueueWithCapacity(1000),
+)
 
-import origamy "github.com/qubely/origamy-go-sdk"
-
-func main() {
-    // Create a custom queue with larger capacity
-    queue := origamy.NewChannelQueue(
-        origamy.QueueWithCapacity(1000),
-    )
-
-    client := origamy.New("your-write-key",
-        origamy.WithQueue(queue),
-    )
-    defer client.Close()
-
-    // Use the client as normal
-}
+client := origamy.New("your-write-key",
+    origamy.WithQueue(queue),
+)
+defer client.Close()
 ```
 
 ### Custom Dispatcher
 
-Implement the `Dispatcher` interface for custom transport mechanisms:
+Implement the `Dispatcher` interface for custom transport:
 
 ```go
 type Dispatcher interface {
@@ -144,60 +154,65 @@ type Dispatcher interface {
 }
 ```
 
-Example with a custom dispatcher:
-
 ```go
-type MyGRPCDispatcher struct {
-    // your gRPC client fields
-}
+type MyGRPCDispatcher struct{}
 
 func (d *MyGRPCDispatcher) Send(payload []byte) error {
     // Send via gRPC
     return nil
 }
 
-func (d *MyGRPCDispatcher) Close() error {
-    return nil
-}
+func (d *MyGRPCDispatcher) Close() error { return nil }
 
-func main() {
-    client := origamy.New("your-write-key",
-        origamy.WithDispatcher(&MyGRPCDispatcher{}),
-    )
-    defer client.Close()
-}
+client := origamy.New("your-write-key",
+    origamy.WithDispatcher(&MyGRPCDispatcher{}),
+)
+defer client.Close()
 ```
 
 ### Full Configuration
 
-For complete control, use `NewWithConfig`:
-
 ```go
-package main
+client, err := origamy.NewWithConfig("your-write-key", origamy.Config{
+    Endpoint:      "https://api.origamy.com",
+    Interval:      30 * time.Second,
+    BatchSize:     250,
+    Verbose:       true,
+    Logger:        origamy.StdLogger(log.New(os.Stderr, "origamy ", log.LstdFlags)),
+    QueueCapacity: 500,
+})
+if err != nil {
+    log.Fatal(err)
+}
+defer client.Close()
+```
 
-import (
-    "log"
-    "os"
-    "time"
+## HTTP Wire Format
 
-    origamy "github.com/qubely/origamy-go-sdk"
-)
+Events are batched and sent as a single HTTP POST to `/v1/batch`. The request body follows the same format as the Origamy Web SDK:
 
-func main() {
-    client, err := origamy.NewWithConfig("your-write-key", origamy.Config{
-        Endpoint:      "https://api.custom-endpoint.io",
-        Interval:      30 * time.Second,
-        BatchSize:     250,
-        Verbose:       true,
-        Logger:        origamy.StdLogger(log.New(os.Stderr, "origamy ", log.LstdFlags)),
-        QueueCapacity: 500,
-    })
-    if err != nil {
-        log.Fatal(err)
+```json
+{
+  "batch": [
+    {
+      "type": "track",
+      "messageId": "uuid",
+      "userId": "user-123",
+      "event": "Order Completed",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "properties": { "revenue": 99.99 },
+      "context": {
+        "library": { "name": "origamy-go", "version": "3.0.0" }
+      }
     }
-    defer client.Close()
+  ],
+  "sentAt": "2024-01-15T10:30:00.123Z"
 }
 ```
+
+Context is attached per-event (not at the batch level). `sentAt` uses ISO 8601 with milliseconds, matching `new Date().toISOString()` from the Web SDK.
+
+Authentication uses HTTP Basic Auth with the write key as the username and an empty password.
 
 ## Available Options
 
@@ -214,6 +229,17 @@ func main() {
 | `WithDefaultContext(ctx)` | Set default context for all messages           |
 | `WithRetryAfter(fn)`      | Set custom retry policy                        |
 | `WithQueueCapacity(n)`    | Set queue capacity (default queue only)        |
+
+## Defaults
+
+| Setting         | Default                     |
+| --------------- | --------------------------- |
+| Endpoint        | `https://api.origamy.com`   |
+| Flush interval  | 5 seconds                   |
+| Batch size      | 250 messages                |
+| Queue capacity  | 100 messages                |
+| Request timeout | 10 seconds                  |
+| Retry attempts  | 10 (exponential backoff)    |
 
 ## License
 

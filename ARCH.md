@@ -49,7 +49,7 @@ graph TB
     end
 
     subgraph "External"
-        OrigamyAPI[Origamy API<br>/v1/batch]
+        OrigamyAPI[Origamy API<br>https://api.origamy.com/v1/batch]
         Console[Console Output]
     end
 
@@ -151,7 +151,7 @@ type Dispatcher interface {
 
 **Built-in Implementations:**
 
-- `HTTPDispatcher` - Production HTTP transport (default)
+- `HTTPDispatcher` - Production HTTP transport (default), sends to `https://api.origamy.com/v1/batch`
 - `NoopDispatcher` - Logs to console in human-readable format (development/debug)
 
 ### Queue Interface
@@ -195,44 +195,41 @@ client := origamy.New("write-key",
 ## Data Flow
 
 1. **Enqueue**: Application calls `client.Enqueue(message)`
-2. **Validate**: Message is validated
-3. **Queue**: Message is pushed to the Queue
-4. **Batch**: Event loop collects messages into batches
-5. **Serialize**: Batch is JSON serialized
-6. **Dispatch**: Dispatcher sends the payload (or logs it for NoopDispatcher)
-7. **Retry**: On failure, retry with exponential backoff
-8. **Callback**: Success/failure callbacks are invoked
-
-## Data Flow
+2. **Validate**: Message is validated (required fields checked)
+3. **Decorate**: `messageId`, `timestamp`, and `context` (library info) are added per-event
+4. **Queue**: Message is pushed to the Queue
+5. **Batch**: Event loop collects messages into batches (by count or byte size)
+6. **Serialize**: Batch is JSON serialized as `{ "batch": [...], "sentAt": "..." }`
+7. **Dispatch**: HTTPDispatcher POSTs to `/v1/batch` with Basic auth
+8. **Retry**: On failure, retry with exponential backoff (up to 10 attempts)
+9. **Callback**: Success/failure callbacks are invoked
 
 ```mermaid
 sequenceDiagram
     participant App as Application
     participant Client as Client
-    participant Chan as Message Channel
-    participant Loop as Event Loop
     participant Queue as Message Queue
+    participant Loop as Event Loop
     participant Exec as Executor
     participant HTTP as HTTP Client
-    participant API as Segment API
+    participant API as Origamy API
 
     App->>Client: Enqueue(Track{...})
     Client->>Client: Validate message
-    Client->>Client: Add messageId & timestamp
-    Client->>Chan: Send message
+    Client->>Client: Add messageId, timestamp, context
+    Client->>Queue: Enqueue message
 
     loop Event Loop
-        Chan->>Loop: Receive message
-        Loop->>Queue: Push to queue
+        Queue->>Loop: Receive message
+        Loop->>Loop: Push to message queue
 
         alt Batch size reached OR Interval tick
-            Queue->>Loop: Flush messages
             Loop->>Exec: sendAsync(batch)
             Exec->>HTTP: POST /v1/batch
             HTTP->>API: JSON payload
             API-->>HTTP: Response
 
-            alt Success
+            alt Success (2xx)
                 HTTP-->>Client: notifySuccess
             else Failure (retry)
                 HTTP->>HTTP: Wait (exponential backoff)
@@ -242,8 +239,8 @@ sequenceDiagram
     end
 
     App->>Client: Close()
-    Client->>Chan: Close channel
-    Loop->>Loop: Drain remaining messages
+    Client->>Queue: Close + drain
+    Loop->>Loop: Flush remaining
     Loop->>Client: Shutdown complete
 ```
 
@@ -257,8 +254,6 @@ type Client interface {
     Enqueue(Message) error
 }
 ```
-
-The main API for interacting with the analytics library. Messages are queued and sent asynchronously in batches.
 
 ### Message Interface
 
@@ -279,8 +274,6 @@ type Callback interface {
 }
 ```
 
-Optional interface for receiving notifications about message delivery status.
-
 ### Logger Interface
 
 ```go
@@ -289,8 +282,6 @@ type Logger interface {
     Errorf(format string, args ...interface{})
 }
 ```
-
-Customizable logging interface for operational visibility.
 
 ## Message Types
 
@@ -382,7 +373,7 @@ classDiagram
 
 ### Event Loop (`client.loop()`)
 
-The event loop is the heart of the client, running in a dedicated goroutine:
+The event loop runs in a dedicated goroutine and drives all batching and flushing:
 
 ```mermaid
 stateDiagram-v2
@@ -408,7 +399,7 @@ stateDiagram-v2
 
 ### Executor
 
-Manages concurrent HTTP requests with a configurable limit:
+Manages concurrent HTTP requests with a configurable limit (default: 1000):
 
 ```mermaid
 graph TB
@@ -435,16 +426,16 @@ graph TB
 
 Batches messages based on count and byte size limits:
 
-- **Max Batch Size**: 250 messages (default)
-- **Max Batch Bytes**: ~500KB
-- **Max Message Size**: Limited per message
+- **Max Batch Size**: 250 messages (default, configurable)
+- **Max Batch Bytes**: ~500KB (hard limit)
+- **Max Message Size**: 32KB per message
 
 ## Configuration
 
 ```mermaid
 graph LR
     subgraph Config
-        Endpoint[Endpoint<br>Default: api.segment.io]
+        Endpoint[Endpoint<br>Default: https://api.origamy.com]
         Interval[Flush Interval<br>Default: 5s]
         BatchSize[Batch Size<br>Default: 250]
         Transport[HTTP Transport]
@@ -489,43 +480,47 @@ graph TB
 ## File Structure
 
 ```
-origamy sdk/
-├── analytics.go      # Core client implementation
-├── config.go         # Configuration types and defaults
-├── message.go        # Message queue and batch handling
-├── executor.go       # Concurrent request executor
+origamy-go-sdk/
+├── index.go              # Public API, type aliases, functional options
 │
-├── track.go          # Track message type
-├── identify.go       # Identify message type
-├── page.go           # Page message type
-├── screen.go         # Screen message type
-├── group.go          # Group message type
-├── alias.go          # Alias message type
-│
-├── context.go        # Context metadata types
-├── properties.go     # Properties helper type
-├── traits.go         # Traits helper type
-├── integrations.go   # Integrations control type
-│
-├── logger.go         # Logger interface
-├── error.go          # Error types
-├── validate.go       # Validation utilities
-├── json.go           # JSON serialization helpers
-│
-├── timeout_15.go     # Go 1.5 timeout handling
-├── timeout_16.go     # Go 1.6+ timeout handling
-│
-├── cmd/cli/          # CLI tool
-├── examples/         # Usage examples
-└── fixtures/         # Test fixtures
+├── internal/
+│   ├── core/
+│   │   ├── analytics.go  # Client implementation, event loop, batching
+│   │   ├── config.go     # Configuration types and defaults
+│   │   ├── message.go    # Batch struct and message queue internals
+│   │   ├── executor.go   # Concurrent request executor
+│   │   ├── track.go      # Track message type
+│   │   ├── identify.go   # Identify message type
+│   │   ├── page.go       # Page message type
+│   │   ├── screen.go     # Screen message type
+│   │   ├── group.go      # Group message type
+│   │   ├── alias.go      # Alias message type
+│   │   ├── context.go    # Context metadata types
+│   │   ├── properties.go # Event properties helper
+│   │   ├── traits.go     # User traits helper
+│   │   ├── integrations.go # Integration controls
+│   │   ├── logger.go     # Logger interface
+│   │   ├── error.go      # Error types
+│   │   └── validate.go   # Validation utilities
+│   │
+│   ├── dispatcher/
+│   │   ├── dispatcher.go # Dispatcher interface
+│   │   ├── http.go       # HTTP dispatcher (production)
+│   │   └── noop.go       # Noop dispatcher (development)
+│   │
+│   └── queue/
+│       ├── queue.go      # Queue interface
+│       └── channel.go    # Channel-based queue implementation
 ```
 
 ## Key Design Patterns
 
 1. **Asynchronous Processing**: Messages are queued and processed in a background goroutine
 2. **Batching**: Multiple messages are combined into single HTTP requests for efficiency
-3. **Backpressure**: Channel-based flow control prevents memory exhaustion
-4. **Graceful Shutdown**: `Close()` drains pending messages before terminating
-5. **Retry with Backoff**: Failed requests are retried with exponential backoff
-6. **Concurrent Execution**: Executor limits concurrent HTTP requests
-7. **Callback Notifications**: Optional callbacks inform the application of success/failure
+3. **Per-Event Context**: Library info and default context are attached to each event (not at batch level), matching the Web SDK wire format
+4. **Backpressure**: Channel-based flow control prevents memory exhaustion
+5. **Graceful Shutdown**: `Close()` drains pending messages before terminating
+6. **Retry with Backoff**: Failed requests are retried with exponential backoff (up to 10 attempts)
+7. **Concurrent Execution**: Executor limits concurrent HTTP requests
+8. **Callback Notifications**: Optional callbacks inform the application of success/failure
+9. **Pluggable Transport**: Dispatcher interface decouples event delivery from the rest of the SDK

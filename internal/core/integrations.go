@@ -12,8 +12,6 @@ package core
 //			.Disable("Salesforce")
 //			.Disable("Marketo"),
 //	}
-//
-// The specifications can be found at https://segment.com/docs/spec/common/#integrations
 type Integrations map[string]interface{}
 
 func NewIntegrations() Integrations {

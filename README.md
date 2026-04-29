@@ -187,6 +187,57 @@ if err != nil {
 defer client.Close()
 ```
 
+## Publishing
+
+### Prerequisites
+
+- Write access to the `github.com/qubely/origamy-go-sdk` repository
+- `GOPROXY` / `GONOSUMCHECK` configured if using a private proxy
+
+### Steps
+
+**1. Update the version constant** in [config.go](analytics/config.go) (or wherever `Version` is defined):
+
+```go
+const Version = "3.0.1"
+```
+
+**2. Run tests** to confirm everything passes:
+
+```bash
+go test ./...
+```
+
+**3. Commit and tag** the release following [semver](https://semver.org) with a `v` prefix:
+
+```bash
+git add .
+git commit -m "release: v3.0.1"
+git tag v3.0.1
+git push origin main --tags
+```
+
+Go modules are distributed directly from the VCS tag — there is no separate publish step. Once the tag is pushed, the new version is immediately available via:
+
+```bash
+go get github.com/qubely/origamy-go-sdk@v3.0.1
+```
+
+**4. (Optional) Notify the Go module proxy** so the new version is indexed immediately:
+
+```bash
+GOPROXY=https://proxy.golang.org go list -m github.com/qubely/origamy-go-sdk@v3.0.1
+```
+
+### Useful Commands
+
+```bash
+go test ./...          # Run the full test suite
+go vet ./...           # Static analysis
+go build ./...         # Verify the package compiles
+go mod tidy            # Clean up go.mod / go.sum before tagging
+```
+
 ## HTTP Wire Format
 
 Events are batched and sent as a single HTTP POST to `/v1/batch`. The request body follows the same format as the Origamy Web SDK:

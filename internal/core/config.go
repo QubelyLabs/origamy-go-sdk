@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/qubely/origamy-go-sdk/internal/dispatcher"
 	"github.com/qubely/origamy-go-sdk/internal/queue"
-	"github.com/segmentio/backo-go"
 )
 
 // Instances of this type carry the different configuration options that may
@@ -159,7 +158,7 @@ func makeConfig(c Config) Config {
 	}
 
 	if c.RetryAfter == nil {
-		c.RetryAfter = backo.DefaultBacko().Duration
+		c.RetryAfter = DefaultBacko().Duration
 	}
 
 	if c.uid == nil {

@@ -1,7 +1,7 @@
 ## Installation
 
 ```
-go get github.com/qubely/origamy-go-sdk
+go get github.com/QubelyLabs/origamy-go-sdk
 ```
 
 ## Usage
@@ -14,7 +14,7 @@ package main
 import (
     "os"
 
-    origamy "github.com/qubely/origamy-go-sdk"
+    origamy "github.com/QubelyLabs/origamy-go-sdk"
 )
 
 func main() {
@@ -191,7 +191,7 @@ defer client.Close()
 
 ### Prerequisites
 
-- Write access to the `github.com/qubely/origamy-go-sdk` repository
+- Write access to the `github.com/QubelyLabs/origamy-go-sdk` repository
 - `GOPROXY` / `GONOSUMCHECK` configured if using a private proxy
 
 ### Steps
@@ -220,13 +220,13 @@ git push origin main --tags
 Go modules are distributed directly from the VCS tag — there is no separate publish step. Once the tag is pushed, the new version is immediately available via:
 
 ```bash
-go get github.com/qubely/origamy-go-sdk@v0.0.0
+go get github.com/QubelyLabs/origamy-go-sdk@v0.0.0
 ```
 
 **4. (Optional) Notify the Go module proxy** so the new version is indexed immediately:
 
 ```bash
-GOPROXY=https://proxy.golang.org go list -m github.com/qubely/origamy-go-sdk@v0.0.0
+GOPROXY=https://proxy.golang.org go list -m github.com/QubelyLabs/origamy-go-sdk@v0.0.0
 ```
 
 ### Useful Commands

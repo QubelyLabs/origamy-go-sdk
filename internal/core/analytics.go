@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/qubely/origamy-go-sdk/internal/dispatcher"
-	"github.com/qubely/origamy-go-sdk/internal/queue"
+	"github.com/QubelyLabs/origamy-go-sdk/internal/dispatcher"
+	"github.com/QubelyLabs/origamy-go-sdk/internal/queue"
 )
 
 // Version of the client.
-const Version = "0.0.0"
+const Version = "0.0.1"
 
 // This interface is the main API exposed by the analytics package.
 // Values that satsify this interface are returned by the client constructors

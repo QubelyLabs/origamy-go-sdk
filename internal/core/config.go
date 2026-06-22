@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/qubely/origamy-go-sdk/internal/dispatcher"
-	"github.com/qubely/origamy-go-sdk/internal/queue"
+	"github.com/QubelyLabs/origamy-go-sdk/internal/dispatcher"
+	"github.com/QubelyLabs/origamy-go-sdk/internal/queue"
 )
 
 // Instances of this type carry the different configuration options that may

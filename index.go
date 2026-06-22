@@ -9,9 +9,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/qubely/origamy-go-sdk/internal/core"
-	"github.com/qubely/origamy-go-sdk/internal/dispatcher"
-	"github.com/qubely/origamy-go-sdk/internal/queue"
+	"github.com/QubelyLabs/origamy-go-sdk/internal/core"
+	"github.com/QubelyLabs/origamy-go-sdk/internal/dispatcher"
+	"github.com/QubelyLabs/origamy-go-sdk/internal/queue"
 )
 
 // Version of the client.

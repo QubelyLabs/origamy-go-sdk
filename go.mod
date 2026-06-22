@@ -1,4 +1,4 @@
-module github.com/qubely/origamy-go-sdk
+module github.com/QubelyLabs/origamy-go-sdk
 
 go 1.25.3
 

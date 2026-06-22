@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	origamy "github.com/qubely/origamy-go-sdk"
+	origamy "github.com/QubelyLabs/origamy-go-sdk"
 )
 
 // demoCallback logs success and failure events from the SDK.

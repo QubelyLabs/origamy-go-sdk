@@ -199,7 +199,7 @@ defer client.Close()
 **1. Update the version constant** in [config.go](analytics/config.go) (or wherever `Version` is defined):
 
 ```go
-const Version = "3.0.1"
+const Version = "0.0.0"
 ```
 
 **2. Run tests** to confirm everything passes:
@@ -212,21 +212,21 @@ go test ./...
 
 ```bash
 git add .
-git commit -m "release: v3.0.1"
-git tag v3.0.1
+git commit -m "release: v0.0.0"
+git tag v0.0.0
 git push origin main --tags
 ```
 
 Go modules are distributed directly from the VCS tag — there is no separate publish step. Once the tag is pushed, the new version is immediately available via:
 
 ```bash
-go get github.com/qubely/origamy-go-sdk@v3.0.1
+go get github.com/qubely/origamy-go-sdk@v0.0.0
 ```
 
 **4. (Optional) Notify the Go module proxy** so the new version is indexed immediately:
 
 ```bash
-GOPROXY=https://proxy.golang.org go list -m github.com/qubely/origamy-go-sdk@v3.0.1
+GOPROXY=https://proxy.golang.org go list -m github.com/qubely/origamy-go-sdk@v0.0.0
 ```
 
 ### Useful Commands
@@ -253,7 +253,7 @@ Events are batched and sent as a single HTTP POST to `/v1/batch`. The request bo
       "timestamp": "2024-01-15T10:30:00Z",
       "properties": { "revenue": 99.99 },
       "context": {
-        "library": { "name": "origamy-go", "version": "3.0.0" }
+        "library": { "name": "origamy-go", "version": "0.0.0" }
       }
     }
   ],

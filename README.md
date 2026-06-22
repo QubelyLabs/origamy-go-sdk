@@ -285,7 +285,7 @@ Authentication uses HTTP Basic Auth with the write key as the username and an em
 
 | Setting         | Default                     |
 | --------------- | --------------------------- |
-| Endpoint        | `https://api.origamy.com`   |
+| Endpoint        | `https://events.origamy.io` |
 | Flush interval  | 5 seconds                   |
 | Batch size      | 250 messages                |
 | Queue capacity  | 100 messages                |

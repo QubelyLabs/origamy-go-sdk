@@ -10,10 +10,10 @@ The HTTP service receives batched analytics events from the Origamy Go SDK (and 
 
 ```
 POST /v1/batch
-Host: api.origamy.com
+Host: events.origamy.io
 ```
 
-Default base URL: `https://api.origamy.com`
+Default base URL: `https://events.origamy.io`
 
 ---
 
@@ -364,7 +364,7 @@ Controls which downstream integrations receive the event:
 
 ```http
 POST /v1/batch HTTP/1.1
-Host: api.origamy.com
+Host: events.origamy.io
 Authorization: Basic d3JpdGVfa2V5Xzk4NzY1NDMyMTA6
 Content-Type: application/json
 Content-Length: 987

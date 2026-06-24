@@ -196,7 +196,7 @@ defer client.Close()
 
 ### Steps
 
-**1. Update the version constant** in [config.go](analytics/config.go) (or wherever `Version` is defined):
+**1. Update the `Version` constant** in [internal/core/analytics.go](internal/core/analytics.go):
 
 ```go
 const Version = "0.0.0"
@@ -217,7 +217,7 @@ git tag v0.0.0
 git push origin main --tags
 ```
 
-Go modules are distributed directly from the VCS tag — there is no separate publish step. Once the tag is pushed, the new version is immediately available via:
+Go modules are distributed directly from the VCS tag — there is no separate publish step, and the module is the repository at that tag (Go has no `dist`/build artifact). The `integration/` example is a separate nested module (its own `go.mod`), so it and its build artifacts are excluded from the published module automatically. Once the tag is pushed, the new version is immediately available via:
 
 ```bash
 go get github.com/QubelyLabs/origamy-go-sdk@v0.0.0

@@ -4,7 +4,7 @@
       "context": {
         "library": {
           "name": "origamy-go",
-          "version": "3.0.0"
+          "version": "__VERSION__"
         }
       },
       "messageId": "I'm unique",

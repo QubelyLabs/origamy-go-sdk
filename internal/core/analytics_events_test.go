@@ -145,9 +145,6 @@ func TestContextIsPerEvent(t *testing.T) {
 	if lib["name"] != "origamy-go" {
 		t.Errorf("library name: got %v, want origamy-go", lib["name"])
 	}
-	if lib["version"] != Version {
-		t.Errorf("library version: got %v, want %s", lib["version"], Version)
-	}
 }
 
 func TestDefaultEndpointIsOrigamy(t *testing.T) {

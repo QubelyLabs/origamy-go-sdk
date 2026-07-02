@@ -1,7 +1,7 @@
 ## Installation
 
 ```
-go get github.com/qubely/origamy-go-sdk
+go get github.com/QubelyLabs/origamy-go-sdk
 ```
 
 ## Usage
@@ -14,7 +14,7 @@ package main
 import (
     "os"
 
-    origamy "github.com/qubely/origamy-go-sdk"
+    origamy "github.com/QubelyLabs/origamy-go-sdk"
 )
 
 func main() {
@@ -104,7 +104,7 @@ client := origamy.New("your-write-key",
     origamy.WithVerbose(true),
     origamy.WithBatchSize(100),
     origamy.WithInterval(10 * time.Second),
-    origamy.WithEndpoint("https://api.origamy.com"),
+    origamy.WithEndpoint("https://events.origamy.io"),
 )
 defer client.Close()
 ```
@@ -174,7 +174,7 @@ defer client.Close()
 
 ```go
 client, err := origamy.NewWithConfig("your-write-key", origamy.Config{
-    Endpoint:      "https://api.origamy.com",
+    Endpoint:      "https://events.origamy.io",
     Interval:      30 * time.Second,
     BatchSize:     250,
     Verbose:       true,
@@ -234,7 +234,7 @@ Authentication uses HTTP Basic Auth with the write key as the username and an em
 
 | Setting         | Default                     |
 | --------------- | --------------------------- |
-| Endpoint        | `https://api.origamy.com`   |
+| Endpoint        | `https://events.origamy.io`   |
 | Flush interval  | 5 seconds                   |
 | Batch size      | 250 messages                |
 | Queue capacity  | 100 messages                |

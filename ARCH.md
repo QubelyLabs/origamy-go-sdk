@@ -49,7 +49,7 @@ graph TB
     end
 
     subgraph "External"
-        OrigamyAPI[Origamy API<br>https://api.origamy.com/v1/batch]
+        OrigamyAPI[Origamy API<br>https://events.origamy.io/v1/batch]
         Console[Console Output]
     end
 
@@ -151,7 +151,7 @@ type Dispatcher interface {
 
 **Built-in Implementations:**
 
-- `HTTPDispatcher` - Production HTTP transport (default), sends to `https://api.origamy.com/v1/batch`
+- `HTTPDispatcher` - Production HTTP transport (default), sends to `https://events.origamy.io/v1/batch`
 - `NoopDispatcher` - Logs to console in human-readable format (development/debug)
 
 ### Queue Interface
@@ -435,7 +435,7 @@ Batches messages based on count and byte size limits:
 ```mermaid
 graph LR
     subgraph Config
-        Endpoint[Endpoint<br>Default: https://api.origamy.com]
+        Endpoint[Endpoint<br>Default: https://events.origamy.io]
         Interval[Flush Interval<br>Default: 5s]
         BatchSize[Batch Size<br>Default: 250]
         Transport[HTTP Transport]

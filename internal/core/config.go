@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/qubely/origamy-go-sdk/internal/dispatcher"
-	"github.com/qubely/origamy-go-sdk/internal/queue"
+	"github.com/QubelyLabs/origamy-go-sdk/internal/dispatcher"
+	"github.com/QubelyLabs/origamy-go-sdk/internal/queue"
 	"github.com/segmentio/backo-go"
 )
 
@@ -99,7 +99,7 @@ type Config struct {
 
 // This constant sets the default endpoint to which client instances send
 // messages if none was explictly set.
-const DefaultEndpoint = "https://api.origamy.com"
+const DefaultEndpoint = "https://events.origamy.io"
 
 // This constant sets the default flush interval used by client instances if
 // none was explicitly set.

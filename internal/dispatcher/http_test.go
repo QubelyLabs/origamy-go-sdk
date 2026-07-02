@@ -240,7 +240,7 @@ func TestHTTPDispatcherMalformedEndpoint(t *testing.T) {
 }
 
 func TestHTTPDispatcherCloseIsIdempotent(t *testing.T) {
-	d := NewHTTPDispatcher(Config{Endpoint: "https://api.origamy.com", WriteKey: "wk"})
+	d := NewHTTPDispatcher(Config{Endpoint: "https://events.origamy.io", WriteKey: "wk"})
 	if err := d.Close(); err != nil {
 		t.Errorf("first Close: %v", err)
 	}

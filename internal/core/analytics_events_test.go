@@ -151,8 +151,8 @@ func TestContextIsPerEvent(t *testing.T) {
 }
 
 func TestDefaultEndpointIsOrigamy(t *testing.T) {
-	if DefaultEndpoint != "https://api.origamy.com" {
-		t.Errorf("DefaultEndpoint: got %s, want https://api.origamy.com", DefaultEndpoint)
+	if DefaultEndpoint != "https://events.origamy.io" {
+		t.Errorf("DefaultEndpoint: got %s, want https://events.origamy.io", DefaultEndpoint)
 	}
 }
 

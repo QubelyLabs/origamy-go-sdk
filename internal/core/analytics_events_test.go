@@ -707,8 +707,8 @@ func TestMultipleEventsInOneBatch(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		client.Enqueue(Track{
-			UserId: "user-bulk",
-			Event:  "Step Completed",
+			UserId:     "user-bulk",
+			Event:      "Step Completed",
 			Properties: Properties{"step": i},
 		})
 	}

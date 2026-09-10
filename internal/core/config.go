@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/QubelyLabs/origamy-go-sdk/internal/dispatcher"
 	"github.com/QubelyLabs/origamy-go-sdk/internal/queue"
+	"github.com/google/uuid"
 	"github.com/segmentio/backo-go"
 )
 

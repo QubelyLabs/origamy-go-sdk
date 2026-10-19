@@ -187,6 +187,42 @@ if err != nil {
 defer client.Close()
 ```
 
+### List Segment Members
+
+A list (manual) segment can be filled by naming people. `NewSegments` takes a
+**secret key** (`sk_`) — public keys are refused — and its calls are
+synchronous:
+
+```go
+segments := origamy.NewSegments(os.Getenv("ORIGAMY_SECRET_KEY"))
+
+res, err := segments.AddMembers(ctx, 42, []origamy.SegmentMember{
+    {Email: "jane@example.com", Traits: map[string]any{"first_name": "Jane"}},
+    {Phone: "0803 123 4567"},
+    {UserID: "user-42"},
+}, origamy.WithPhoneRegion("NG"))
+if err != nil {
+    var serr *origamy.SegmentError
+    if errors.As(err, &serr) && serr.Code == origamy.SegmentErrNotList {
+        // the segment is computed from conditions and can't take people by name
+    }
+    log.Fatal(err)
+}
+fmt.Println(res.Added, res.Rejected)
+
+res, err = segments.RemoveMembers(ctx, 42, []origamy.SegmentMember{{Email: "old@example.com"}})
+```
+
+Each added person goes through the event pipeline as an identify: someone new
+becomes a profile, and segment-entered journeys start, normally within seconds.
+Removals apply before the call returns and start segment-exited journeys.
+
+Lists longer than 1000 rows are sent in several requests and their results
+combined; `Rejected[i].Index` is the row's position in the slice you passed.
+Requests that are rate limited (429) or find the service unavailable (503) are
+retried up to 3 times. `NewSegments` uses `WithEndpoint` and `WithRetryAfter`
+from the options below.
+
 ## HTTP Wire Format
 
 Events are batched and sent as a single HTTP POST to `/v1/batch`. The request body follows the same format as the Origamy Web SDK:
